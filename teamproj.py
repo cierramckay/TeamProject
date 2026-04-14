@@ -41,6 +41,7 @@ while e<32:
     win.append(mean_win)
     e+=1
 print("Winter mean",mean_win)
+
 plt.scatter(weeks,year1,label="Flue Doses" )
 plt.plot(weeks,sum,color="green",label="Summer Mean")
 plt.plot(weeks,fall,color="red",label="Fall Mean")
@@ -53,4 +54,22 @@ plt.grid()
 plt.show()
 
 
+# Using all data: Dose mean for each month
+
+month_means=[]
+months=["Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"]
+for x in months:
+    v=[]
+    s=0
+    for i in data["End_Date"]:
+        if x in i:
+            v.append(float(data["Cumulative_Flu_Doses_Distributed"][s]))
+        s+=1
+    new=np.mean(v)
+    month_means.append(float(new))
+plt.bar(months,month_means)
+plt.ylabel("Mean Flu Doses Distributed (Millions)")
+plt.title("Mean Flu Doses Distributed From August to March: 2018-2026")
+plt.grid()
+plt.show()
 
