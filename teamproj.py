@@ -169,6 +169,66 @@ plt.legend()
 plt.grid()
 plt.show()
 
+# August 2018 through March 2020
+m=1
+me=[]
+while m<=32:
+    b=0
+    h=[]
+    for x in data["Week_Sort_Order"]:
+        if b>64:
+            break
+        elif x==m:
+            h.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
+        b+=1
+    z=np.mean(h)
+    me.append(float(z))
+    m+=1
+
+# August 2020 through March 2023
+l=1
+mee=[]
+while l<=32:
+    b=0
+    h=[]
+    for x in data["Week_Sort_Order"]:
+        if b<=64 or b>160:
+            continue
+        elif x==l:
+            h.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
+            print(1)
+        b+=1
+    z=np.mean(h)
+    mee.append(float(z))
+    l+=1
+
+
+# August 2023 through March 2026
+m=1
+meee=[]
+while m<=32:
+    b=0
+    h=[]
+    for x in data["Week_Sort_Order"]:
+        if b<=160:
+            break
+        if x==m:
+            h.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
+        b+=1
+    z=np.mean(h)
+    meee.append(float(z))
+    m+=1
+print(me)
+print(mee)
+print(meee)
+
+
+plt.scatter(weeks,me)
+plt.xlabel("Weeks")
+plt.ylabel("Flu Doses Distributed (Millions)")
+plt.title("Mean Flu Doses Distributed Each Week From July to March (2018-2020)")
+plt.grid()
+plt.show()
 
 
 
