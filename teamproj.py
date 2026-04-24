@@ -7,21 +7,48 @@ import numpy as np
 file="final_data.csv"
 data=pd.read_csv(file)
 
-# Using all data: Dose mean for each month
-month_means=[]
-months=["Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar"]
-for x in months:
-    v=[]
-    s=0
+
+month_means = []
+months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
+
+for x in range(len(months)):
+    v = []
+    s = 0
+
     for i in data["End_Date"]:
-        if x in i:
-            v.append(float(data["Cumulative_Flu_Doses_Distributed"][s]))
-        s+=1
-    new=np.mean(v)
+        if months[x] in str(i):
+            current = float(data["Cumulative_Flu_Doses_Distributed"][s])
+
+            # August has no previous month, so keep original value
+            if x == 0:
+                v.append(current)
+
+            else:
+                prev_month = months[x - 1]
+
+                # find previous month's cumulative value
+                prev_value = None
+                t = 0
+                for j in data["End_Date"]:
+                    if prev_month in str(j):
+                        prev_value = float(data["Cumulative_Flu_Doses_Distributed"][t])
+
+                # subtract previous month cumulative total
+                        if t < s:
+                            prev_value = float(data["Cumulative_Flu_Doses_Distributed"][t])
+                    t += 1
+
+                if prev_value is not None:
+                    v.append(current - prev_value)
+
+        s += 1
+
+    new = np.mean(v)
     month_means.append(float(new))
-plt.bar(months,month_means)
+plt.figure()
+plt.bar(months, month_means)
 plt.ylabel("Mean Flu Doses Distributed (Millions)")
-plt.title("Mean Flu Doses Distributed From August to March: 2018-2026")
+plt.title("Mean Flu Doses Distributed From August to March: 2018–2026")
 plt.grid()
 plt.show()
 
@@ -67,8 +94,8 @@ e=0
 while e<32:
     win.append(mean_win)
     e+=1
-
-plt.scatter(weeks,year1,label="Flue Doses" )
+plt.figure()
+plt.scatter(weeks,year1,label="Flu Doses" )
 plt.plot(weeks,sum,color="green",label="Summer Mean")
 plt.plot(weeks,fall,color="red",label="Fall Mean")
 plt.plot(weeks,win,color="black",label="Winter Mean")
@@ -79,100 +106,430 @@ plt.legend()
 plt.grid()
 plt.show()
 
-# Mean for each week from 2018-2026
-m=1
-me=[]
-while m<=32:
-    b=0
-    h=[]
+# Replace every use of:
+# data["Cumulative_Flu_Doses_Distributed"]
+
+# with this new column first:
+
+data["Weekly_Doses"] = 0.0
+
+b = 0
+for x in data["Week_Sort_Order"]:
+    current = float(data["Cumulative_Flu_Doses_Distributed"][b])
+
+    # first week of each flu season stays the same
+    if x == 1:
+        data.loc[b, "Weekly_Doses"] = current
+
+    else:
+        prev_value = float(data["Cumulative_Flu_Doses_Distributed"][b - 1])
+        data.loc[b, "Weekly_Doses"] = current - prev_value
+
+    b += 1
+
+
+# =========================================================
+# Mean for each week from 2018–2026 (NON-CUMULATIVE)
+# =========================================================
+
+m = 1
+me = []
+
+while m <= 32:
+    b = 0
+    h = []
+
     for x in data["Week_Sort_Order"]:
-        if x==m:
-            h.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-        b+=1
-    z=np.mean(h)
+        if x == m:
+            h.append(float(data["Weekly_Doses"][b]))
+        b += 1
+
+    z = np.mean(h)
     me.append(float(z))
-    m+=1
+    m += 1
+
+
+# =========================================================
+# PRE COVID (2018–2020)
+# =========================================================
+
+m = 1
+pre_mean = []
+
+while m <= 32:
+    b = 0
+    h = []
+
+    for x in data["Week_Sort_Order"]:
+        if b > 64:
+            break
+
+        elif x == m:
+            h.append(float(data["Weekly_Doses"][b]))
+
+        b += 1
+
+    z = np.mean(h)
+    pre_mean.append(float(z))
+    m += 1
+
+
+# =========================================================
+# DURING COVID (2020–2023)
+# =========================================================
+
+m = 1
+during_mean = []
+
+while m <= 32:
+    b = 0
+    h = []
+
+    for x in data["Week_Sort_Order"]:
+        if b <= 64 or b > 160:
+            b += 1
+            continue
+
+        elif x == m:
+            h.append(float(data["Weekly_Doses"][b]))
+
+        b += 1
+
+    z = np.mean(h)
+    during_mean.append(float(z))
+    m += 1
+
+
+# =========================================================
+# POST COVID (2023–2026)
+# =========================================================
+
+m = 1
+post_mean = []
+
+while m <= 32:
+    b = 0
+    h = []
+
+    for x in data["Week_Sort_Order"]:
+        if b <= 160:
+            b += 1
+            continue
+
+        elif x == m:
+            h.append(float(data["Weekly_Doses"][b]))
+
+        b += 1
+
+    z = np.mean(h)
+    post_mean.append(float(z))
+    m += 1
+
+
+# =========================================================
+# SEASONAL MEANS
+# =========================================================
+
+summer = []
+fall = []
+winter = []
+
+for i in range(len(me)):
+    week = i + 1
+
+    if week <= 8:
+        summer.append(me[i])
+
+    elif week <= 20:
+        fall.append(me[i])
+
+    else:
+        winter.append(me[i])
+
+mean_sum = np.mean(summer)
+mean_fall = np.mean(fall)
+mean_win = np.mean(winter)
+
+
+# PRE seasonal means
+
+summer_pre = pre_mean[:8]
+fall_pre = pre_mean[8:20]
+winter_pre = pre_mean[20:]
+
+mean_sumPRE = np.mean(summer_pre)
+mean_fallPRE = np.mean(fall_pre)
+mean_winPRE = np.mean(winter_pre)
+
+
+# DURING seasonal means
+
+summer_dur = during_mean[:8]
+fall_dur = during_mean[8:20]
+winter_dur = during_mean[20:]
+
+mean_sumDUR = np.mean(summer_dur)
+mean_fallDUR = np.mean(fall_dur)
+mean_winDUR = np.mean(winter_dur)
+
+
+# POST seasonal means
+
+summer_post = post_mean[:8]
+fall_post = post_mean[8:20]
+winter_post = post_mean[20:]
+
+mean_sumPOST = np.mean(summer_post)
+mean_fallPOST = np.mean(fall_post)
+mean_winPOST = np.mean(winter_post)
+
+
+# =========================================================
+# GRAPHS
+# =========================================================
+
+weeks = np.linspace(1, 32, 32)
+
+
+# ALL YEARS
+plt.figure()
+plt.scatter(weeks, me, label="Weekly Mean")
+
+plt.axhline(float(mean_sum), label="Summer Mean")
+plt.axhline(float(mean_fall), label="Fall Mean")
+plt.axhline(float(mean_win), label="Winter Mean")
+
+plt.xlabel("Weeks: August to March")
+plt.ylabel("Flu Doses Distributed (Millions)")
+plt.title("Weekly Flu Doses Distributed (2018–2026)")
+plt.legend()
+plt.grid()
+plt.show()
+
+
+# LAYERED PRE / DURING / POST
+plt.figure()
+plt.scatter(weeks, pre_mean, label="Pre COVID")
+plt.scatter(weeks, during_mean, label="During COVID")
+plt.scatter(weeks, post_mean, label="Post COVID")
+
+plt.xlabel("Weeks")
+plt.ylabel("Flu Doses Distributed (Millions)")
+plt.title("Pre vs During vs Post COVID")
+plt.legend()
+plt.grid()
+plt.show()
+
+
+# SEASONAL BAR CHARTS
+
+time = ["Pre", "During", "Post"]
+plt.figure()
+plt.bar(time, [mean_sumPRE, mean_sumDUR, mean_sumPOST])
+plt.title("Summer Mean Weekly Doses")
+plt.ylabel("Millions")
+plt.show()
+plt.figure()
+plt.bar(time, [mean_fallPRE, mean_fallDUR, mean_fallPOST])
+plt.title("Fall Mean Weekly Doses")
+plt.ylabel("Millions")
+plt.show()
+
+plt.figure()
+plt.bar(time, [mean_winPRE, mean_winDUR, mean_winPOST])
+plt.title("Winter Mean Weekly Doses")
+plt.ylabel("Millions")
+plt.show()
+
+
+
+
+
+
+
+#below is the original code before we tried to change it
+
+# Mean for each week from 2018-2026 (weekly doses only, not cumulative)
+
+m = 1
+me = []
+
+while m <= 32:
+    b = 0
+    h = []
+
+    for x in data["Week_Sort_Order"]:
+        if x == m:
+            current = float(data["Cumulative_Flu_Doses_Distributed"][b])
+
+            # Week 1 stays the same since there is no previous week
+            if m == 1:
+                h.append(current)
+
+            else:
+                prev_value = None
+                t = 0
+
+                # find previous week's cumulative value
+                for y in data["Week_Sort_Order"]:
+                    if y == m - 1:
+                        if t < b:
+                            prev_value = float(data["Cumulative_Flu_Doses_Distributed"][t])
+                    t += 1
+
+                # subtract previous week's cumulative total
+                if prev_value is not None:
+                    h.append(current - prev_value)
+
+        b += 1
+
+    z = np.mean(h)
+    me.append(float(z))
+    m += 1
+
 
 # Separating data by season for each year
-summer=[]
-fall=[]
-n=0
+summer = []
+fall = []
+n = 0
+
 for x in data["Reporting_TimeFrame"]:
-    x=x.split("-")
-    t=int(x[2])
-    e=int(x[5])
-    if x[1]==x[4]=="09":
-        if 22 in range(t,e+1):
+    x = x.split("-")
+    t = int(x[2])
+    e = int(x[5])
+
+    if x[1] == x[4] == "09":
+        if 22 in range(t, e + 1):
             summer.append(int(data["Week_Sort_Order"][n]))
-            n+=1
+            n += 1
         else:
-            n+=1
+            n += 1
             continue
-    elif x[1]==x[4]=="12":
-        if 21 in range(t,e+1):
+
+    elif x[1] == x[4] == "12":
+        if 21 in range(t, e + 1):
             fall.append(int(data["Week_Sort_Order"][n]))
-            n+=1
+            n += 1
         else:
-            n+=1
+            n += 1
             continue
+
     else:
-        n+=1
+        n += 1
         continue
 
-# Finding the mean of each season over all years
-sumT=[]
-fallT=[]
-winT=[]
-k=0
-b=0
-for x in data["Week_Sort_Order"]:
-    if x in range(0,summer[k]+1):
-        sumT.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-    elif x in range(summer[k]+1,fall[k]+1):
-        fallT.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-    else:
-        winT.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-    if x==32:
-        k+=1
-    b+=1
 
-# Mean of seasons relating to COVID
-sumPRE=[]
-fallPRE=[]
-winPRE=[]
-sumDUR=[]
-fallDUR=[]
-winDUR=[]
-sumPOST=[]
-fallPOST=[]
-winPOST=[]
-k=0
-b=0
+# Finding the mean of each season over all years (non-cumulative weekly values)
+
+sumT = []
+fallT = []
+winT = []
+
+k = 0
+b = 0
+
 for x in data["Week_Sort_Order"]:
-    if k<2:
-        if x in range(0,summer[k]+1):
-            sumPRE.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-        elif x in range(summer[k]+1,fall[k]+1):
-            fallPRE.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-        else:
-            winPRE.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-    elif k<5:
-        if x in range(0,summer[k]+1):
-            sumDUR.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-        elif x in range(summer[k]+1,fall[k]+1):
-            fallDUR.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-        else:
-            winDUR.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
+    current = float(data["Cumulative_Flu_Doses_Distributed"][b])
+
+    # convert cumulative → weekly-only
+    if x == 1:
+        weekly_value = current
     else:
-        if x in range(0,summer[k]+1):
-            sumPOST.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-        elif x in range(summer[k]+1,fall[k]+1):
-            fallPOST.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
+        prev_value = None
+        t = 0
+
+        for y in data["Week_Sort_Order"]:
+            if y == x - 1:
+                if t < b:
+                    prev_value = float(data["Cumulative_Flu_Doses_Distributed"][t])
+            t += 1
+
+        if prev_value is not None:
+            weekly_value = current - prev_value
         else:
-            winPOST.append(float(data["Cumulative_Flu_Doses_Distributed"][b]))
-    if x==32:
-        k+=1
-    b+=1
+            weekly_value = current
+
+    if x in range(0, summer[k] + 1):
+        sumT.append(weekly_value)
+
+    elif x in range(summer[k] + 1, fall[k] + 1):
+        fallT.append(weekly_value)
+
+    else:
+        winT.append(weekly_value)
+
+    if x == 32:
+        k += 1
+
+    b += 1
+
+
+# Mean of seasons relating to COVID (non-cumulative weekly values)
+
+sumPRE = []
+fallPRE = []
+winPRE = []
+
+sumDUR = []
+fallDUR = []
+winDUR = []
+
+sumPOST = []
+fallPOST = []
+winPOST = []
+
+k = 0
+b = 0
+
+for x in data["Week_Sort_Order"]:
+    current = float(data["Cumulative_Flu_Doses_Distributed"][b])
+
+    # convert cumulative → weekly-only
+    if x == 1:
+        weekly_value = current
+    else:
+        prev_value = None
+        t = 0
+
+        for y in data["Week_Sort_Order"]:
+            if y == x - 1:
+                if t < b:
+                    prev_value = float(data["Cumulative_Flu_Doses_Distributed"][t])
+            t += 1
+
+        if prev_value is not None:
+            weekly_value = current - prev_value
+        else:
+            weekly_value = current
+
+    if k < 2:
+        if x in range(0, summer[k] + 1):
+            sumPRE.append(weekly_value)
+        elif x in range(summer[k] + 1, fall[k] + 1):
+            fallPRE.append(weekly_value)
+        else:
+            winPRE.append(weekly_value)
+
+    elif k < 5:
+        if x in range(0, summer[k] + 1):
+            sumDUR.append(weekly_value)
+        elif x in range(summer[k] + 1, fall[k] + 1):
+            fallDUR.append(weekly_value)
+        else:
+            winDUR.append(weekly_value)
+
+    else:
+        if x in range(0, summer[k] + 1):
+            sumPOST.append(weekly_value)
+        elif x in range(summer[k] + 1, fall[k] + 1):
+            fallPOST.append(weekly_value)
+        else:
+            winPOST.append(weekly_value)
+
+    if x == 32:
+        k += 1
+
+    b += 1
 
 # Making data (ALL) fit to graph
 mean_sum=np.mean(sumT)
