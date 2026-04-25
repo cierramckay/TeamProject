@@ -329,3 +329,45 @@ plt.bar(time, [mean_winPRE, mean_winDUR, mean_winPOST],color=colors)
 plt.title("Winter Mean Weekly Doses")
 plt.ylabel("Millions")
 plt.show()
+
+from scipy.stats import ttest_ind
+peak_months = []
+other_months = []
+for x in range(len(months)):
+    v = []
+    s = 0
+    for i in data["End_Date"]:
+        if months[x] in str(i):
+            current = float(data["Cumulative_Flu_Doses_Distributed"][s])
+            if x == 0:
+                monthly_dose = current
+            else:
+                prev_month = months[x-1]
+                prev_value = None
+                t = 0
+                for j in data["End_Date"]:
+                    if prev_month in str(j):
+                        if t < s:
+                            prev_value = float(
+                                data["Cumulative_Flu_Doses_Distributed"][t]
+                            )
+                    t += 1
+                if prev_value is not None:
+                    monthly_dose = current - prev_value
+                else:
+                    s += 1
+                    continue
+            if months[x] in ["Sep","Oct","Nov"]:
+                peak_months.append(monthly_dose)
+            else:
+                other_months.append(monthly_dose)
+        s += 1
+
+# Independent t-test
+t_stat, p_value = ttest_ind(peak_months, other_months, equal_var=False)
+print("t =", t_stat)
+print("p =", p_value)
+if p_value < 0.05:
+    print("September to November is significantly higher.")
+else:
+    print("No significant difference.")
